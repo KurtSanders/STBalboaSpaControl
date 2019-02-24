@@ -1,4 +1,4 @@
-# BalboaSpaControl
+# STBalboaSpaControl
 ---
 
 #### Version 1.0.0
@@ -35,7 +35,7 @@ Create a new SmartThings Repository entry in your SmartThings IDE under 'Setting
 
 | Owner | Name | Branch |
 |------|:-------:|--------|
-| kurtsanders | BalboaSpaControl | master |
+| kurtsanders | STBalboaSpaControl | master |
 
 **Required Files in your SmartThings IDE Repository**
 
