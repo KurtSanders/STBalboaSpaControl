@@ -44,7 +44,8 @@ metadata {
         attribute "spaPump2", "enum", ['Low','High','Off']
         attribute "heatMode", "enum", ['Rest','Ready/Rest','Ready']
 
-        command "heatModeRest"
+/*
+		command "heatModeRest"
         command "heatModeReady"
         command "spaPump1Low"
         command "spaPump1High"
@@ -52,10 +53,12 @@ metadata {
         command "spaPump2Low"
         command "spaPump2High"
         command "spaPump2Off"
+        command "refresh"
+*/
     }
     tiles(scale: 2) {
         // Current Temperature Reading
-        multiAttributeTile(name:"temperature", type:"generic", width:6, height:4, canChangeIcon: false) {
+        multiAttributeTile(name:"temperature", type:"generic", width:6, height:4, canChangeIcon: true) {
             tileAttribute("device.temperature", key: "PRIMARY_CONTROL") {
                 attributeState("default",label:'${currentValue}º',
                                backgroundColors:[
@@ -70,14 +73,7 @@ metadata {
             }
         }
         valueTile("heatingSetpoint", "device.heatingSetpoint",  decoration: "flat", width: 3, height: 1) {
-            state("heatingSetpoint", label:'Set Temp:\n${currentValue}°F',
-                backgroundColors:[
-                    [value: 0,   color: whiteColor],
-                    [value: 50,  color: navyColor],
-                    [value: 90,  color: blueColor],
-                    [value: 104, color: redColor]
-                ]
-            )
+            state("heatingSetpoint", label:'Set Temp:\n${currentValue}°F')
         }
         standardTile("thermostatOperatingState", "device.thermostatOperatingState", decoration: "flat", width: 2, height: 2) {
             state "idle", label:'${name}',
@@ -130,30 +126,17 @@ metadata {
                 icon: "st.valves.water.closed", backgroundColor: whiteColor
         }
         // Hot Tub Heat Mode On/Off
-        standardTile("heatMode", "heatMode", inactiveLabel: false, width: 2, height: 2,) {
+        standardTile("heatMode", "heatMode", action:"heatModeReady" , inactiveLabel: false, width: 2, height: 2,) {
             state "Ready", 		label:'Ready', 	action:"heatModeRest", 	icon:"st.Kids.kids20", 	backgroundColor:"#ffffff", nextState:"Rest"
             state "Ready/Rest", label:'Ready', 	action:"heatModeRest", 	icon:"st.Kids.kids20", 	backgroundColor:"#ffffff", nextState:"Rest"
             state "Rest", 		label:'Rest', 	action:"heatModeReady", icon:"st.Kids.kids20", 	backgroundColor:"#00a0dc", nextState:"Ready"
         }
         // Descriptive Text
-        valueTile("statusText", "statusText", decoration: "flat", width: 3, height: 1, wordWrap: true) {
-            state "statusText", label: '${currentValue}', backgroundColor:whiteColor
+        valueTile("statusText", "statusText", decoration: "flat", width: 4, height: 1, wordWrap: true) {
+            state "statusText", label: '${currentValue}', backgroundColor:whiteColor, action:"refresh"
         }
         valueTile("schedulerFreq", "schedulerFreq", decoration: "flat", inactiveLabel: false, width: 3, height: 1, wordWrap: true) {
-            state "schedulerFreq", label: 'Refresh Every\n${currentValue} min(s)',
-                backgroundColors: [
-                    [value: '0',    color: "#FF0000"],
-                    [value: '1',    color: "#9400D3"],
-                    [value: '2',    color: "#00FF00"],
-                    [value: '3',    color: "#458b74"],
-                    [value: '4',    color: "#FF7F00"],
-                    [value: '5',    color: "#4B0082"],
-                    [value: '10',   color: "#0000FF"],
-                    [value: '15',   color: "#00FF00"],
-                    [value: '30',   color: "#FFFF00"],
-                    [value: '60',   color: "#FF7F00"],
-                    [value: '180',  color: "#ff69b4"]
-                ]
+            state "schedulerFreq", label: 'Refresh Every\n${currentValue} min(s)', action:"refresh"
         }
         standardTile("refresh", "refresh", inactiveLabel: false, decoration: "flat", width: 2, height: 1) {
             state "default", label: 'Refresh', action:"refresh.refresh", icon:"st.secondary.refresh"
@@ -171,27 +154,27 @@ metadata {
                 "spaPump1",
                 "spaPump2",
                 "heatingSetpoint",
-                "refresh",
+                "schedulerFreq",
                 "statusText",
-                "schedulerFreq"
+                "refresh"
             ]
         )
     }
 }
 
 def refresh() {
-    log.debug "BWA handler.refresh ---- Started"
     Date now = new Date()
     def timeString = now.format("EEE MMM dd h:mm:ss a", location.timeZone)
+    log.info "==>Refresh Requested from Balboa Spa Control, sending refresh() request to parent smartApp"
     sendEvent(name: "statusText", value: "Cloud Refresh Requested at\n${timeString}...", "displayed":false)
     parent.refresh()
-    log.debug "BWA handler.refresh ---- Ended"
 }
 
 def installed() {
-	log.debug "BWA Installed: Begin..."
-	log.debug "BWA Installed: End..."
 }
+
+/*
+
 def on() {
     log.trace "HotTub: Turning On"
     parent.tubAction('switch', 'on')
@@ -232,3 +215,4 @@ def spaPump2Off() {
     log.trace "HotTub Turning spaPump2 Off"
     parent.tubAction('spaPump2', 'Off')
 }
+*/

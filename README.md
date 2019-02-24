@@ -2,7 +2,7 @@
 ---
 
 #### Version 1.0.0
-
+Balboa™ 
 ## Description:
 
 A custom SmartThings® SmartApp and Device Handlers (DTH) which provides a connection to ones compatible [Balboa™ spa controller](http://www.balboawatergroup.com/bwa) and WiFi module. 
