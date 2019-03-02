@@ -308,6 +308,68 @@ def getSpaCloudState() {
 	return true
 }
 
+def byte[] getSpaCloudData() {
+    debugVerbose("getSpaCloudData(): Start")
+    def respdata
+    def d = getChildDevice(DTHDNI())
+    def byte[] B64decoded
+    Date now = new Date()
+    def timeString = new Date().format('EEE MMM d h:mm:ss a',location.timeZone)
+    def Web_idigi_post  = "https://developer.idigi.com/ws/sci"
+    def Web_postdata 	= '<sci_request version="1.0"><file_system cache="false" syncTimeout="15">\
+    <targets><device id="' + "${state.devid}" + '"/></targets><commands><get_file path="PanelUpdate.txt"/>\
+    <get_file path="DeviceConfiguration.txt"/></commands></file_system></sci_request>'
+    def respParams = [:]
+    def params = [
+        'uri'			: Web_idigi_post,
+        'headers'		: idigiHeaders(),
+        'body'			: Web_postdata
+    ]
+    infoVerbose("Start httpPost =============")
+    try {
+        httpPost(params) {
+            resp ->
+            if(resp.status == 200) {
+                debugVerbose("HttpPost Request was OK ${resp.status}")
+                log.info "httpPost resp.data: ${resp.data}"
+                respdata = resp.data
+            } else {
+                log.error "httpPost resp.status: ${resp.status}"
+                return null
+            }
+        }
+    }
+    catch (Exception e)
+    {
+        debugVerbose("Catch HttpPost Error: ${e}")
+        d.sendEvent(name: "contact",   	value: "open", displayed: true)
+        return null
+    }
+    if(respdata == "Device Not Connected") {
+        log.error "HttpPost Request: ${respdata}"
+        unschedule()
+        d.sendEvent(name: "contact",   	value: "open", displayed: true)
+        state.statusText = "Spa Fatal Error ${respdata} at\n${timeString}"
+        if (phone) {
+            sendSms(phone, state.spaText)
+        }
+        return null
+    }
+    else {
+        d.sendEvent(name: "contact",   	value: "closed", displayed: true)
+        state.statusText 			= "Spa data refreshed at\n${timeString}"
+        state.respdata				= respdata.toString()
+        state.B64decoded 			= respdata.decodeBase64()
+        B64decoded 					= respdata.decodeBase64()
+        log.debug "B64decoded: ${state.B64decoded}"
+        // def byte[] B64decoded = B64encoded.decodeBase64()
+        // def hexstring = B64decoded.encodeHex()
+        // log.info "hexstring: ${hexstring}"
+    }
+    infoVerbose("getOnlineData: End")
+    return B64decoded
+}
+
 def updateDeviceStates() {
     infoVerbose("Start: updateDeviceStates-------------")
     infoVerbose("Sending Device Updates to Virtual Spa Tile")
@@ -315,10 +377,8 @@ def updateDeviceStates() {
     def timeString = new Date().format("M/d 'at' h:mm:ss a",location.timeZone).toLowerCase()
     def d = getChildDevice(DTHDNI())
     d.sendEvent(name: "temperature", value: state.temperature, displayed: true)
-    d.sendEvent(name: "contact",   	value: state.contact, displayed: true)
     d.sendEvent(name: "switch",    	value: state.switch, displayed: true)
     d.sendEvent(name: "heatMode", 	value: state.heatMode, displayed: true)
-    d.sendEvent(name: "contact", 	value: state.contact, displayed: true)
     d.sendEvent(name: "light", value: state.light, displayed: true)
     d.sendEvent(name: "thermostatOperatingState", value: state.thermostatOperatingState, displayed: true)
     d.sendEvent(name: "thermostatMode", value: state.thermostatMode, displayed: true)
@@ -333,72 +393,6 @@ def updateDeviceStates() {
     infoVerbose("End: updateDeviceStates-------------")
 }
 
-def byte[] getSpaCloudData() {
-    debugVerbose("getSpaCloudData(): Start")
-    def httpPostStatus = resp
-    def byte[] B64decoded
-    Date now = new Date()
-    def timeString = new Date().format('EEE MMM d h:mm:ss a',location.timeZone)
-    def Web_idigi_post  = "https://developer.idigi.com/ws/sci"
-    def Web_postdata 	= '<sci_request version="1.0"><file_system cache="false" syncTimeout="15">\
-    <targets><device id="' + "${state.devid}" + '"/></targets><commands><get_file path="PanelUpdate.txt"/>\
-    <get_file path="DeviceConfiguration.txt"/></commands></file_system></sci_request>'
-	def respParams = [:]
-    def params = [
-        'uri'			: Web_idigi_post,
-        'headers'		: idigiHeaders(),
-        'body'			: Web_postdata
-    ]
-    infoVerbose("Start httpPost =============")
-    try {
-        httpPost(params) {
-            resp ->
-            infoVerbose("httpPost resp.status: ${resp.status}")
-            httpPostStatus = resp
-        }
-    }
-    catch (Exception e)
-    {
-        debugVerbose("Catch HttpPost Error: ${e}")
-        return null
-    }
-    if (httpPostStatus==null) {
-        return null
-    }
-    def resp = httpPostStatus
-    if(resp.status == 200) {
-        debugVerbose("HttpPost Request was OK ${resp.status}")
-        if(resp.data == "Device Not Connected") {
-            errorVerbose("HttpPost Request: ${resp.data}")
-            unschedule()
-            state.statusText = "Spa Fatal Error ${resp.data} at\n${timeString}"
-            state.contact = "open"
-            def message = "Spa Error: ${resp.data}! at ${timeString}."
-            if (phone) {
-                sendSms(phone, message)
-            }
-            return null
-        }
-        else {
-            state.statusText 			= "Spa data refreshed at\n${timeString}"
-            state.contact 				= "closed"
-            state.respdata				= resp.data
-            state.B64decoded 			= resp.data.decodeBase64()
-            B64decoded 					= resp.data.decodeBase64()
-            log.debug "B64decoded: ${state.B64decoded}"
-            // def byte[] B64decoded = B64encoded.decodeBase64()
-            // def hexstring = B64decoded.encodeHex()
-            // log.info "hexstring: ${hexstring}"
-        }
-    }
-    else {
-        errorVerbose("HttpPost Request got http status ${resp.status}")
-        state.statusText = "Spa Fatal Error Http Status ${resp.status} at ${timeString}."
-        return null
-    }
-    infoVerbose("getOnlineData: End")
-    return B64decoded
-}
 
 def decodeSpaB64Data(byte[] d) {
     infoVerbose("Entering decodeSpaB64Data")
@@ -498,34 +492,34 @@ def decodeSpaB64Data(byte[] d) {
 
 def getHotTubDeviceID() {
     def ipAddress	 	= null
-    def devID			= null
     if (isIP(hostName)) {
         ipAddress = hostName
     } else {
         ipAddress = convertHostnameToIPAddress(hostName)
     }
     if (ipAddress) {
-        devID = getSpaDevId(ipAddress)
-        log.debug "getHotTubDeviceID(): Received ${devID} from getSpaDevId(${ipAddress})"
+        state.devid = getSpaDevId(ipAddress)
+        log.debug "getHotTubDeviceID(): Received ${state.devid} from getSpaDevId(${ipAddress})"
     } else {
         log.error "Invalid public IP address provided"
+        state.devid = null
         return false
     }
-    if (devID) {
+    if (state.devid) {
         log.debug "getHotTubDeviceID(): Valid Spa devID, Defining State Variables ${devID}, ${hostName}, ${ipAddress}"
         state.hostname 	= hostName
 		state.publicip 	= ipAddress
-        state.devid 	= devID
     } else {
         log.error "getHotTubDeviceID(): Invalid Spa devID, Erased state variables because the Spa devid = ${devID}"
-        state.devid 	= devID
+        state.hostname 	= null
+		state.publicip 	= null
         return false
     }
     return true
 }
 
 def getSpaDevId(ipAddress) {
-    def devID = null
+    def respdata
     def dtf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.S'Z'")
     def tf = new java.text.SimpleDateFormat('EEE MMM d h:mm:ss a')
     def url   	= "https://my.idigi.com/ws/DeviceCore/.json?condition=dpGlobalIp='" + ipAddress + "'"
@@ -539,29 +533,29 @@ def getSpaDevId(ipAddress) {
         httpGet(params) { resp ->
             if ( (resp.status == 200) && (resp.data.items) ) {
                 log.debug "SpaDevId resp.data = ${resp.data}"
-//                state.devRespData = resp.data
-                devID = resp.data?.items?.devConnectwareId[0]
-                def lastUpdateTime 	= dtf.parse(resp.data.items?.dpLastUpdateTime[0])
-                def loc = getTwcLocation()?.location
-                tf.setTimeZone(TimeZone.getTimeZone(loc.ianaTimeZone))
-                state.lastupdate 	= "${tf.format(lastUpdateTime)}"
-                state.devid 		= resp.data.items?.devConnectwareId[0]
-                state.devicetype 	= resp.data.items?.dpDeviceType[0]
-                state.mac 			= resp.data.items?.devMac[0]
-                state.localip 		= resp.data.items?.dpLastKnownIp[0]
-                state.online 		= resp.data.items?.dpConnectionStatus[0]=='1'?'True':'False'
+                respdata = resp.data
             }
             else {
                 log.error "HttpGet Request for devID got http status ${resp.status}"
+                return null
             }
         }
     }
     catch (Exception e)
     {
         log.error "${e}"
+        return null
     }
-    log.info "Return getSpaDevID: devID = '${devID}'"
-    return devID
+    def lastUpdateTime 	= dtf.parse(resp.data.items?.dpLastUpdateTime[0])
+    def loc = getTwcLocation()?.location
+    tf.setTimeZone(TimeZone.getTimeZone(loc.ianaTimeZone))
+    state.lastupdate 	= "${tf.format(lastUpdateTime)}"
+    state.devid 		= respdata.items?.devConnectwareId[0]
+    state.devicetype 	= respdata.items?.dpDeviceType[0]
+    state.mac 			= respdata.items?.devMac[0]
+    state.localip 		= respdata.items?.dpLastKnownIp[0]
+    state.online 		= respdata.items?.dpConnectionStatus[0]=='1'?'True':'False'
+    return state.devid
 }
 
 def setScheduler(schedulerFreq) {
