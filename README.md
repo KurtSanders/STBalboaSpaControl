@@ -1,17 +1,18 @@
 # STBalboaSpaControl
+SanderSoft™ 2019
+
 ---
 
-#### Version 1.0.0
-Balboa™ 
+#### Version 1.0.x
+* This initial alpha version is functional VIEW STATUS Only.  Future updates will be provided to allow one to change the spa operating state (Pumps, Lights, Heat Mode, Set Temperature, etc).
+
 ## Description:
 
 A custom SmartThings® SmartApp and Device Handlers (DTH) which provides a connection to ones compatible [Balboa™ spa controller](http://www.balboawatergroup.com/bwa) and WiFi module. 
 
 This SmartThings application allows one to view the state of their [Balboa™ spa](http://www.balboawatergroup.com/bwa) with  [CloudControl™](https://www.bullfrogspas.com/cloudcontrol/).  
 
-This initial version will be updated to allow one to change the spa operating state in future updates. 
-
-## Weather Station Tile and Details View
+## My Spa Tile and Details View
 
 <p align="center">
 <img src="https://raw.githubusercontent.com/KurtSanders/BalboaSpaControl/master/images/screenshots/MainScreen1.jpeg" width=200>
@@ -50,6 +51,6 @@ You will need to use 'Update from Repo' to install into your SmartThings IDE rep
 **Instructions**
 
 1. Using the 'Update from REPO' button in the 'My SmartApps' SmartThings IDE, check the 'Balboa Spa Controller' SmartApp and publish & press Save.  
-2. Using the 'Update from REPO' button in the "My Device Handlers" SmartThings IDE, check the Balboa Spa Control Device and publish & press Save.  ([See GitHub IDE integration](https://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html?highlight=github)) from this STAmbientWeather(master) repository to your SmartThings IDE.
+2. Using the 'Update from REPO' button in the "My Device Handlers" SmartThings IDE, check the Balboa Spa Control Device and publish & press Save.  ([See GitHub IDE integration](https://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html?highlight=github)) from this STBalboaSpaControl(master) repository to your SmartThings IDE.
 3. Locate the Balboa Spa Control app in the MarketPlace/SmartApps/My Apps list and click to launch the smartapp.
-4. Enter your [routers public IP address](https://www.google.com/search?q=whats+my+ip+address) or DNS name. 
+4. Enter your [routers public IP address](https://www.google.com/search?q=whats+my+ip+address) or DNS name if you have this service set in your router or otherwise. 
