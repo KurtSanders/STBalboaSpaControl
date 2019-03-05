@@ -67,9 +67,8 @@ def mainMenu() {
     {
         section ("Spa WiFi Information") {
             input ( name: "hostName",
-                   type: "enum",
+                   type: "text",
                    title: "Select the FQDN or PUBLIC IP Address of your network?",
-                   options: ["kurtsanders.mynetgear.com", "kurtsanders.myXnetgear.com","174.101.169.159", "10.0.0.35"],
                    submitOnChange: true,
                    multiple: false,
                    required: true
@@ -263,7 +262,7 @@ def main() {
 //        'tod',
         'temperature',
         'statusText',
-        'contact',
+        'connected',
         'heatMode',
         'switch',
         'spaPump1',
@@ -342,13 +341,13 @@ def byte[] getSpaCloudData() {
     catch (Exception e)
     {
         debugVerbose("Catch HttpPost Error: ${e}")
-        d.sendEvent(name: "contact",   	value: "open", displayed: true)
+        d.sendEvent(name: "connected",   	value: "offline", displayed: true)
         return null
     }
     if(respdata == "Device Not Connected") {
         log.error "HttpPost Request: ${respdata}"
         unschedule()
-        d.sendEvent(name: "contact",   	value: "open", displayed: true)
+        d.sendEvent(name: "connected",   	value: "offline", displayed: true)
         state.statusText = "Spa Fatal Error ${respdata} at\n${timeString}"
         if (phone) {
             sendSms(phone, state.spaText)
@@ -356,7 +355,7 @@ def byte[] getSpaCloudData() {
         return null
     }
     else {
-        d.sendEvent(name: "contact",   	value: "closed", displayed: true)
+        d.sendEvent(name: "connected",   	value: "online", displayed: true)
         state.statusText 			= "Spa data refreshed at\n${timeString}"
         state.respdata				= respdata.toString()
         state.B64decoded 			= respdata.decodeBase64()
@@ -546,7 +545,7 @@ def getSpaDevId(ipAddress) {
         log.error "${e}"
         return null
     }
-    def lastUpdateTime 	= dtf.parse(resp.data.items?.dpLastUpdateTime[0])
+    def lastUpdateTime 	= dtf.parse(respdata.items?.dpLastUpdateTime[0])
     def loc = getTwcLocation()?.location
     tf.setTimeZone(TimeZone.getTimeZone(loc.ianaTimeZone))
     state.lastupdate 	= "${tf.format(lastUpdateTime)}"

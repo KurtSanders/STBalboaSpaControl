@@ -27,12 +27,13 @@ def blueColor 		= "#0000FF"
 
 metadata {
     definition (name: "Balboa Spa Control Device", namespace: "kurtsanders", author: "kurt@kurtsanders.com") {
-        capability "Contact Sensor"
         capability "Light"
         capability "Refresh"
         capability "Sensor"
         capability "Switch"
-        capability "Thermostat"
+        capability "Temperature Measurement"
+        capability "Thermostat Heating Setpoint"
+
 
         attribute "tubStatus", 	"string"
         attribute "statusText", "string"
@@ -40,6 +41,10 @@ metadata {
         attribute "spaPump1", "enum", ['Low','High','Off']
         attribute "spaPump2", "enum", ['Low','High','Off']
         attribute "heatMode", "enum", ['Rest','Ready/Rest','Ready']
+        attribute "thermostatMode", "enum", ['off','heat']
+        attribute "thermostatOperatingState", "enum", ['idle','heating']
+        attribute "connected", "enum", ['online','offine']
+
 
         command "refresh"
     }
@@ -62,13 +67,13 @@ metadata {
         valueTile("heatingSetpoint", "device.heatingSetpoint",  decoration: "flat", width: 3, height: 1) {
             state("heatingSetpoint", label:'Set Temp:\n${currentValue}°F')
         }
-        standardTile("thermostatOperatingState", "device.thermostatOperatingState", decoration: "flat", width: 2, height: 2) {
+        standardTile("thermostatOperatingState", "thermostatOperatingState", decoration: "flat", width: 2, height: 2) {
             state "idle", label:'${name}',
                 icon: "https://raw.githubusercontent.com/KurtSanders/MySmartThingsPersonal/master/devicetypes/kurtsanders/bwa.src/icons/idle.png"
             state "heating", label:'${name}',
                 icon: "https://raw.githubusercontent.com/KurtSanders/MySmartThingsPersonal/master/devicetypes/kurtsanders/bwa.src/icons/heating.png"
         }
-        standardTile("thermostatMode", "device.thermostatMode", decoration: "flat", width: 2, height: 2,) {
+        standardTile("thermostatMode", "thermostatMode", decoration: "flat", width: 2, height: 2,) {
             state "off",  label: 'Heat Off', icon: "st.Outdoor.outdoor19"
             state "heat", label: 'Heat On',
                 icon: "https://raw.githubusercontent.com/KurtSanders/MySmartThingsPersonal/master/devicetypes/kurtsanders/bwa.src/icons/heatMode.png"
@@ -87,11 +92,11 @@ metadata {
             state "turningOff", label:'${name}', icon:"st.Lighting.light13", backgroundColor:yellowColor , nextState:"turningOn"
         }
         // Network Connected Status
-        standardTile("contact", "device.contact",  width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
-            state "open",   label:'Offline', action:"open",
+        standardTile("connected", "connected",  width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
+            state "offline",   label:'Offline', action:"open",
                 icon: "https://raw.githubusercontent.com/KurtSanders/MySmartThingsPersonal/master/devicetypes/kurtsanders/bwa.src/icons/offline.png",
                 backgroundColor:yellowColor
-            state "closed", label:'Online', action:"closed",
+            state "online", label:'Online', action:"closed",
                 icon: "https://raw.githubusercontent.com/KurtSanders/MySmartThingsPersonal/master/devicetypes/kurtsanders/bwa.src/icons/broadcast.png",
                 backgroundColor:greenColor
         }
@@ -133,7 +138,7 @@ metadata {
                 "temperature",
                 "switch",
                 "heatMode",
-                "contact",
+                "connected",
                 "light",
                 "thermostatOperatingState",
                 "thermostatMode",
