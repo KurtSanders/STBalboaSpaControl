@@ -23,8 +23,8 @@ import java.text.SimpleDateFormat;
 def version()   { return ["V1.0", "Original Code Base"] }
 // End Version Information
 
-String appVersion()	 { return "1.0" }
-String appModified() { return "2019-02-03" }
+String appVersion()	 { return "1.0.1" }
+String appModified() { return "2019-03-06" }
 
 definition(
     name: 		"Balboa Spa Controller",

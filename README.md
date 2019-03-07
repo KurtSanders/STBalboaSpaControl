@@ -46,8 +46,8 @@ You will need to use 'Update from Repo' to install into your SmartThings IDE rep
 
 | IDE Repository    | Filename | Status | Version |
 | :---: | :----------| :---:  | :---:  |
-| My SmartApps      | kurtsanders : Balboa Spa Controller | **New**  | 1.0.0 |
-| My Device Handler | kurtsanders : Balboa Spa Control Device | **New** | 1.0.0 |
+| My SmartApps      | kurtsanders : Balboa Spa Controller | **New**  | 1.0.1 |
+| My Device Handler | kurtsanders : Balboa Spa Control Device | **New** | 1.0.1 |
 
 
 **Instructions**
