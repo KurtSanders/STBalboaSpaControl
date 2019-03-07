@@ -45,8 +45,11 @@ metadata {
         attribute "thermostatOperatingState", "enum", ['idle','heating']
         attribute "connected", "enum", ['online','offine']
 
-
         command "refresh"
+		command "heatLevelUp"
+		command "heatLevelDown"
+        command "lightOn"
+        command "lightOff"
     }
     tiles(scale: 2) {
         // Current Temperature Reading
@@ -64,7 +67,7 @@ metadata {
                 attributeState("tubStatus", label:'${currentValue}', defaultState: true)
             }
         }
-        valueTile("heatingSetpoint", "device.heatingSetpoint",  decoration: "flat", width: 3, height: 1) {
+        valueTile("heatingSetpoint", "device.heatingSetpoint",  decoration: "flat", width: 2, height: 1) {
             state("heatingSetpoint", label:'Set Temp:\n${currentValue}°F')
         }
         standardTile("thermostatOperatingState", "thermostatOperatingState", decoration: "flat", width: 2, height: 2) {
@@ -78,18 +81,15 @@ metadata {
             state "heat", label: 'Heat On',
                 icon: "https://raw.githubusercontent.com/KurtSanders/MySmartThingsPersonal/master/devicetypes/kurtsanders/bwa.src/icons/heatMode.png"
         }
-        // Hot Tub Turn Power On/Off
-        standardTile("switch", "device.switch",  width: 2, height: 2, canChangeIcon: true) {
-            state "off", 		label:'Off', 	action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"turningOn"
-            state "turningOn", 	label:'${name}', icon:"st.switches.switch.on", backgroundColor:yellowColor, nextState:"off"
-            state "on", 		label:'On', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#00a0dc", nextState:"off"
+        // Hot Tub Turn Pumps On/Off
+        standardTile("switch", "device.switch",  width: 2, height: 2, decoration: "flat") {
+            state "off", 		label:'Pumps ${currentValue}', action:"off", icon:"st.Outdoor.outdoor16", backgroundColor:"#ffffff"
+            state "on", 		label:'Pumps ${currentValue}', action:"on",  icon:"st.Outdoor.outdoor16", backgroundColor:"#00a0dc"
         }
-        // LED Lights
-        standardTile("light", "device.light",  width: 2, height: 2, canChangeIcon: true) {
-            state "on", label:'Lights ${name}', icon:"st.Lighting.light11", backgroundColor:greenColor	, nextState:"turningOff"
-            state "off", label:'Lights ${name}', icon:"st.Lighting.light13", backgroundColor:whiteColor	, nextState:"turningOn"
-            state "turningOn", label:'${name}', icon:"st.Lighting.light11", backgroundColor:yellowColor	, nextState:"turningOff"
-            state "turningOff", label:'${name}', icon:"st.Lighting.light13", backgroundColor:yellowColor , nextState:"turningOn"
+        // Turn SPA Lights On/Off
+        standardTile("light", "device.light",  width: 2, height: 2, decoration: "flat") {
+            state "on",  label:'On',  action: "lightOff", icon:"st.Lighting.light11", backgroundColor:"#00a0dc", nextstate: 'off'
+            state "off", label:'Off', action: "lightOn",  icon:"st.Lighting.light13", backgroundColor:"#ffffff", nextstate: 'on'
         }
         // Network Connected Status
         standardTile("connected", "connected",  width: 2, height: 2, inactiveLabel: false, decoration: "flat") {
@@ -117,13 +117,13 @@ metadata {
                 icon: "st.valves.water.closed", backgroundColor: whiteColor
         }
         // Hot Tub Heat Mode On/Off
-        standardTile("heatMode", "heatMode", action:"heatModeReady" , inactiveLabel: false, width: 2, height: 2,) {
+        standardTile("heatMode", "heatMode", action:"heatModeReady" , inactiveLabel: false, decoration: "flat", width: 2, height: 2,) {
             state "Ready", 		label:'Ready', 	action:"heatModeRest", 	icon:"st.Kids.kids20", 	backgroundColor:"#ffffff", nextState:"Rest"
             state "Ready/Rest", label:'Ready', 	action:"heatModeRest", 	icon:"st.Kids.kids20", 	backgroundColor:"#ffffff", nextState:"Rest"
             state "Rest", 		label:'Rest', 	action:"heatModeReady", icon:"st.Kids.kids20", 	backgroundColor:"#00a0dc", nextState:"Ready"
         }
         // Descriptive Text
-        valueTile("statusText", "statusText", decoration: "flat", width: 3, height: 1, wordWrap: true) {
+        valueTile("statusText", "statusText", decoration: "flat", width: 4, height: 1, wordWrap: true) {
             state "statusText", label: '${currentValue}', backgroundColor:whiteColor, action:"refresh"
         }
         valueTile("schedulerFreq", "schedulerFreq", decoration: "flat", inactiveLabel: false, width: 2, height: 1, wordWrap: true) {
@@ -132,6 +132,13 @@ metadata {
         standardTile("refresh", "refresh", inactiveLabel: false, decoration: "flat", width: 2, height: 1) {
             state "default", label: 'Refresh', action:"refresh.refresh", icon:"st.secondary.refresh"
         }
+		standardTile("heatLevelDown", "device.heatingSetpoint", width: 2, height: 1, canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
+			state "heatLevelDown", label:'Heat', action:"heatLevelDown", icon: "http://raw.githubusercontent.com/yracine/device-type.myecobee/master/icons/heatDown.png", backgroundColor: "#ffffff"
+
+		}
+		standardTile("heatLevelUp", "device.heatingSetpoint", width: 2, height: 1, canChangeIcon: false, inactiveLabel: false, decoration: "flat") {
+			state "heatLevelUp", label:'Heat', action:"heatLevelUp", icon: "http://raw.githubusercontent.com/yracine/device-type.myecobee/master/icons/heatUp.png", backgroundColor: "#ffffff"
+		}
         main(["temperature"])
         details(
             [
@@ -141,13 +148,15 @@ metadata {
                 "connected",
                 "light",
                 "thermostatOperatingState",
+                "heatLevelUp",
+                "heatLevelDown",
                 "thermostatMode",
                 "spaPump1",
                 "spaPump2",
                 "heatingSetpoint",
                 "schedulerFreq",
-                "statusText",
-                "refresh"
+                "refresh",
+                "statusText"
             ]
         )
     }
@@ -164,34 +173,38 @@ def installed() {
 }
 
 def on() {
-    log.trace "Spa: Turning On"
-//    sendEvent(name: "switch", value: "on")
+    log.trace "Spa: Turning Pumps On"
+//    parent.changeLights('on')
 }
 def off() {
-    log.trace "Spa Turning Off"
-//    sendEvent(name: "switch", value: "off")
+    log.trace "Spa Turning Pumps Off"
+//    parent.changeLights('off')
 }
-def heatModeReady() {
-    log.trace "HotTub: Turning HeatMode Ready"
+
+def light(direction) {
+    log.trace "Spa: Turning Lights ${direction}"
+    if (parent.changeLights(direction)) {
+        sendEvent(name: "light", value: direction, isStateChange: true, display: true, displayed: true)
+	}
 }
-def heatModeRest() {
-    log.trace "HotTub Turning HeatMode Rest"
+
+def lightOn() {
+    log.trace "Spa: Turning Lights On"
+    if (parent.changeLights('on')) {
+        sendEvent(name: "light", value: "on", isStateChange: true, display: true, displayed: true)
+	}
 }
-def spaPump1Low() {
-    log.trace "HotTub Turning spaPump1 Low"
+def lightOff() {
+    log.trace "Spa Turning Lights Off"
+    if (parent.changeLights('off')) {
+        sendEvent(name: "light", value: "off", isStateChange: true, display: true, displayed: true)
+	}
 }
-def spaPump1High() {
-    log.trace "HotTub Turning spaPump1 High"
+
+void heatLevelUp() {
+    parent.changeSetTemperature('up')
 }
-def spaPump1Off() {
-    log.trace "HotTub Turning spaPump1 Off"
-}
-def spaPump2Low() {
-    log.trace "HotTub Turning spaPump2 Low"
-}
-def spaPump2High() {
-    log.trace "HotTub Turning spaPump2 High"
-}
-def spaPump2Off() {
-    log.trace "HotTub Turning spaPump2 Off"
+
+void heatLevelDown() {
+    parent.changeSetTemperature('down')
 }

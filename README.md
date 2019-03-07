@@ -3,8 +3,10 @@ SanderSoft™ 2019
 
 ---
 
-#### Version 1.0.x
-* This initial alpha version is functional VIEW STATUS Only.  Future updates will be provided to allow one to change the spa operating state (Pumps, Lights, Heat Mode, Set Temperature, etc).
+#### Version 1.0.1
+* This initial alpha version is functional VIEW STATUS only except for Lights On/Off and Set Desired Heat Temperature Up/Down Buttons.  
+
+Future updates will be provided to allow one to change the spa operating state (Pumps, Heat Mode, etc).
 
 ## Description:
 

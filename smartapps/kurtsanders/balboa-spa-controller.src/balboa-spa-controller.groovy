@@ -167,7 +167,6 @@ def mainOptions() {
 def initialize() {
     setScheduler(schedulerFreq)
     subscribe(app, appTouchHandler)
-//    updateStateVar()
 }
 
 def installed() {
@@ -187,142 +186,132 @@ def updated() {
 def appTouchHandler(evt="") {
     log.info "App Touch ${random()}: '${evt.descriptionText}' at ${timestamp()}"
     main()
-
-/*
-    if (debugVerbose) {
-        def children = app.getChildDevices()
-        def thisdevice
-        log.debug "SmartApp $app.name has ${children.size()} child devices"
-        thisdevice = children.findAll { it.typeName }.sort { a, b -> a.deviceNetworkId <=> b.deviceNetworkId }.each {
-            log.info "${it} <-> DNI: ${it.deviceNetworkId}"
-        }
-    }
-
-//    log.info "state.respdata   -> ${state.respdata}"
-//    def String decodeString = state.respdata
-//    def byte[] decoded = decodeString.decodeBase64()
-//    log.debug "decoded => ${decoded}"
-//    log.info "state.B64decoded -> ${state.B64decoded}"
-//    def byte[] B64decoded
-//    B64decoded = state.respdata.decodeBase64()
-//    log.info "B64decoded -> ${B64decoded}"
-
-*/
-}
-
-def add_bwa_ChildDevice() {
-    // add Hot Tub BWA device
-    if (!getChildDevice(DTHDNI())) {
-        log.debug "Creating a NEW device named 'My Spa' as ${DTHName()} with DNI: ${DTHDNI()}"
-        try {
-            addChildDevice("kurtsanders", DTHName(), DTHDNI(), null, ["name": "My Spa", label: "My Spa", completedSetup: true])
-        } catch(e) {
-            errorVerbose("The Device Handler '${DTHName()}' was not found in your 'My Device Handlers', Error-> '${e}'.  Please install this DTH device in the IDE's 'My Device Handlers'")
-            return false
-        }
-        debugVerbose("Success: Added a new device named 'My Spa' as ${DTHName()} with DNI: ${DTHDNI()}")
-    } else {
-        debugVerbose("Verification: Device exists named 'My Spa' as ${DTHName()} with DNI: ${DTHDNI()}")
-    }
-}
-def remove_bwa_ChildDevice() {
-    getAllChildDevices().each {
-        log.debug "Deleting Spa device: ${it.deviceNetworkId}"
-        try {
-            deleteChildDevice(it.deviceNetworkId)
-        }
-        catch (e) {
-            log.debug "${e} deleting the Spa device: ${it.deviceNetworkId}"
-        }
-    }
-}
-
-def refresh() {
-    log.info "Executing Refresh Routine ID:${random()} at ${timestamp()}"
-	main()
 }
 
 def main() {
     log.info "Executing Main Routine ID:${random()} at ${timestamp()}"
     updateStateVar("timestamp")
-    getSpaCloudState()
-    decodeSpaB64Data(state.B64decoded)
+    if (!getSpaCloudData()) { return }
+    decodeSpaB64Data()
     updateDeviceStates()
-    return
-/*
-    def stateVariables =  [
-//        'devicetype',
-//        'devid',
-//        'hostname',
-//        'lastupdate',
-//        'localip',
-//        'mac',
-//        'online',
-//        'publicip',
-//        'tod',
-        'temperature',
-        'statusText',
-        'connected',
-        'heatMode',
-        'switch',
-        'spaPump1',
-        'spaPump2',
-        'thermostatOperatingState',
-        'thermostatMode',
-        'light',
-        'heatingSetpoint'
-    ]
-    stateVariables.each {
-        updateStateVar( it, "doctor")
+}
+
+def changeSetTemperature(direction) {
+    log.info "Executing changeSetTemperature($direction) Routine ID:${random()} at ${timestamp()}"
+    main()
+    def nextlevel = (direction=='up')?state.heatingSetpoint.toInteger() + 1:state.heatingSetpoint.toInteger() - 1
+    log.debug "nextlevel = ${nextlevel}"
+    if (SpaSetTargetTemperature(nextlevel)) {
+        updateStateVar("heatingSetpoint", nextlevel)
+		send("heatingSetpoint")
+    } else {
+        main()
     }
-    return
-*/
 }
 
-def updateStateVar(key='timestamp', value=null, cmd='put') {
-    log.debug "Before ${cmd} Update for state.${key} = ${state.get(key)}"
-    if (key=="timestamp") { value = timestamp() }
-    log.info "state.put(${key} = ${value})"
-    state."${key}" = "${value}"
-    log.debug "After ${cmd} Update for state.${key} = ${state.get(key)}"
+def changeLights(direction) {
+    log.debug "Executing changeLights($direction) Routine ID:${random()} at ${timestamp()}"
+    def lightButton = "17"
+    main()
+    //    PressButton("17")  17 = LED
+    if (direction != state.light) {
+    log.debug "Changing light from '${state.light}' to '${direction}'"
+        if (PressButton(lightButton)) {
+            log.debug "Lights successfully turned '${direction}'"
+            updateStateVar("light", direction)
+            send([name : "light", value : state.light])
+        } else {
+            main()
+        }
+    } else {
+        log.debug "Lights are already ${state.light}"
+        send([name: "light", value: state.light])
+        return false
+    }
+    return true
 }
 
-def getSpaCloudState() {
-    infoVerbose("handler.getSpaCloudState() ----Started")
+def SpaSetTargetTemperature(newsetvalue) {
+    log.debug "Setting Hot Tub Set Temp from ${state.heatingSetpoint} to ${newsetvalue}"
+    def body = \
+    '<sci_request version="1.0"><data_service><targets>' + \
+    '<device id="' + state.devid + '"/></targets><requests>' + \
+    '<device_request target_name="SetTemp">' + newsetvalue + '.000000</device_request>' + \
+    '</requests></data_service></sci_request>'
+    return BalboaHttpRequest(body)
+}
 
-// Get array values from cloud for Hot Tub Status
-	def byte[] B64decoded = null
-    for (int i = 1; i < 4; i++) {
-        log.debug "getOnlineData ${random()}: ${i} attempt..."
-        B64decoded = getSpaCloudData()
-        if (B64decoded) {
-            log.debug "getOnlineData: Success, received '${B64decoded}' on ${i} attempt"
-            break
+def SetPumps(direction) {
+    //    PressButton("X")  # where X = 4 = Jet1, or X = 5  = Jet2
+    def LEDButton = "17"
+    def Pump1 = "4"
+    def Pump2 = "5"
+/*
+    if (SetLEDLightsOn) { return PressButton(LEDButton) }
+    if (SetPumpsOn) {
+        if (state.spaPump1 == "Off") {
+            PressButton(Pump1)
+            PressButton(Pump1)
+            } else if (state.spaPump1 == "Low") {
+            PressButton(Pump1)
+            } else if (
+        if Spa_Dict_Status["Pump"][1] == "Off":
+            PressButton(Pump2)
+            PressButton(Pump2)
+        elif Spa_Dict_Status["Pump"][1] == "Low":
+            PressButton(Pump2)
+    else:  # Pumps Off
+        if Spa_Dict_Status["Pump"][0] == "Low":
+            PressButton(Pump1)
+            PressButton(Pump1)
+        elif Spa_Dict_Status["Pump"][0] == "High":
+            PressButton(Pump1)
+        if Spa_Dict_Status["Pump"][1] == "Low":
+            PressButton(Pump2)
+            PressButton(Pump2)
+        elif Spa_Dict_Status["Pump"][1] == "High":
+            PressButton(Pump2)
+    */
+}
+
+def BalboaHttpRequest(body) {
+    log.debug "body: ${body}"
+    def params = [
+        'uri'			: Web_idigi_post(),
+        'headers'		: idigiHeaders(),
+        'body'			: body
+    ]
+    infoVerbose("Start httpPost for BalboaHttpRequest =============")
+    try {
+        httpPost(params) {
+            resp ->
+            if(resp.status != 200) {
+                log.error "HttpPost resp.status: ${resp.status}"
+                return false
+            }
         }
     }
-    if (!B64decoded) {
-    	log.error "getOnlineData: Failure, received '${B64decoded}':  Exiting..."
-    	return false
+    catch (Exception e)
+    {
+        debugVerbose("Catch HttpPost Error: ${e}")
+        return false
     }
-	return true
+    return true
 }
 
-def byte[] getSpaCloudData() {
+def getSpaCloudData() {
     debugVerbose("getSpaCloudData(): Start")
-    def respdata
     def d = getChildDevice(DTHDNI())
     def byte[] B64decoded
     Date now = new Date()
     def timeString = new Date().format('EEE MMM d h:mm:ss a',location.timeZone)
-    def Web_idigi_post  = "https://developer.idigi.com/ws/sci"
-    def Web_postdata 	= '<sci_request version="1.0"><file_system cache="false" syncTimeout="15">\
-    <targets><device id="' + "${state.devid}" + '"/></targets><commands><get_file path="PanelUpdate.txt"/>\
-    <get_file path="DeviceConfiguration.txt"/></commands></file_system></sci_request>'
     def respParams = [:]
+    def respdata
+    boolean connected = false
     def params = [
-        'uri'			: Web_idigi_post,
+        'uri'			: Web_idigi_post(),
         'headers'		: idigiHeaders(),
-        'body'			: Web_postdata
+        'body'			: Web_postdata()
     ]
     infoVerbose("Start httpPost =============")
     try {
@@ -332,41 +321,38 @@ def byte[] getSpaCloudData() {
                 debugVerbose("HttpPost Request was OK ${resp.status}")
                 log.info "httpPost resp.data: ${resp.data}"
                 respdata = resp.data
+                connected = true
             } else {
                 log.error "httpPost resp.status: ${resp.status}"
-                return null
+                respdata = null
+                return connected
             }
         }
     }
     catch (Exception e)
     {
         debugVerbose("Catch HttpPost Error: ${e}")
-        d.sendEvent(name: "connected",   	value: "offline", displayed: true)
-        return null
+        respdata = null
+        return connected
     }
     if(respdata == "Device Not Connected") {
         log.error "HttpPost Request: ${respdata}"
         unschedule()
-        d.sendEvent(name: "connected",   	value: "offline", displayed: true)
         state.statusText = "Spa Fatal Error ${respdata} at\n${timeString}"
         if (phone) {
             sendSms(phone, state.spaText)
         }
-        return null
     }
     else {
-        d.sendEvent(name: "connected",   	value: "online", displayed: true)
+		connected = true
         state.statusText 			= "Spa data refreshed at\n${timeString}"
         state.respdata				= respdata.toString()
         state.B64decoded 			= respdata.decodeBase64()
-        B64decoded 					= respdata.decodeBase64()
-        log.debug "B64decoded: ${state.B64decoded}"
-        // def byte[] B64decoded = B64encoded.decodeBase64()
-        // def hexstring = B64decoded.encodeHex()
-        // log.info "hexstring: ${hexstring}"
+        log.debug "state.B64decoded: ${state.B64decoded}"
     }
+    d.sendEvent(name: "connected",   	value: connected?'online':'offline', displayed: true)
     infoVerbose("getOnlineData: End")
-    return B64decoded
+    return connected
 }
 
 def updateDeviceStates() {
@@ -387,16 +373,15 @@ def updateDeviceStates() {
     d.sendEvent(name: "statusText", value: "${state.statusText}", displayed: false)
     d.sendEvent(name: "schedulerFreq", value: "${schedulerFreq}", displayed: false)
     d.sendEvent(name: "tubStatus",
-    value: "${state.heatMode} - ${state.thermostatOperatingState.capitalize()} to ${state.heatingSetpoint}ºF on ${timeString}",
+    value: "${state.heatMode} - ${state.thermostatOperatingState.capitalize()} to ${state.heatingSetpoint}${state.tempunits} on ${timeString}",
     displayed: false)
     infoVerbose("End: updateDeviceStates-------------")
 }
 
 
-def decodeSpaB64Data(byte[] d) {
+def decodeSpaB64Data() {
     infoVerbose("Entering decodeSpaB64Data")
-    def byte[] B64decoded = d
-    log.debug "B64decoded = ${B64decoded}"
+    def B64decoded = state.B64decoded
     def params = [:]
     def offset = 0
 
@@ -407,6 +392,8 @@ def decodeSpaB64Data(byte[] d) {
         spaCurTemp = 0
     }
     updateStateVar("temperature",spaCurTemp)
+    offset = 13
+    updateStateVar("tempunits",(B64decoded[offset])?'ºC':'ºF')
 
     //  Hot Tub Mode State
     offset = 9
@@ -564,29 +551,28 @@ def setScheduler(schedulerFreq) {
         unschedule()
         break
         case '1':
-        runEvery1Minute(refresh)
+        runEvery1Minute('main')
         break
         case '5':
-        runEvery5Minutes(refresh)
+        runEvery5Minutes('main')
         break
         case '10':
-        runEvery10Minutes(refresh)
+        runEvery10Minutes('main')
         break
         case '15':
-        runEvery15Minutes(refresh)
+        runEvery15Minutes('main')
         break
         case '30':
-        runEvery30Minutes(refresh)
+        runEvery30Minutes('main')
         break
         case '60':
-        runEvery1Hour(refresh)
+        runEvery1Hour('main')
         break
         case '180':
-        runEvery3Hours(refresh)
+        runEvery3Hours('main')
         break
         default :
-        infoVerbose("Unknown Schedule Frequency")
-        unschedule()
+        log.error "Unknown Schedule Frequency '${schedulerFreq}'"
         return
     }
     if(schedulerFreq=='0'){
@@ -594,7 +580,7 @@ def setScheduler(schedulerFreq) {
     } else {
         infoVerbose("Scheduled RunEvery${schedulerFreq}Minute")
     }
-
+    send([name:'schedulerFreq', value: schedulerFreq])
 }
 
 def boolean isIP(String str)
@@ -681,6 +667,56 @@ def tubAction(feature, command) {
     infoVerbose("SmartApp tubAction----- End")
 }
 
+def add_bwa_ChildDevice() {
+    // add Hot Tub BWA device
+    if (!getChildDevice(DTHDNI())) {
+        log.debug "Creating a NEW device named 'My Spa' as ${DTHName()} with DNI: ${DTHDNI()}"
+        try {
+            addChildDevice("kurtsanders", DTHName(), DTHDNI(), null, ["name": "My Spa", label: "My Spa", completedSetup: true])
+        } catch(e) {
+            errorVerbose("The Device Handler '${DTHName()}' was not found in your 'My Device Handlers', Error-> '${e}'.  Please install this DTH device in the IDE's 'My Device Handlers'")
+            return false
+        }
+        debugVerbose("Success: Added a new device named 'My Spa' as ${DTHName()} with DNI: ${DTHDNI()}")
+    } else {
+        debugVerbose("Verification: Device exists named 'My Spa' as ${DTHName()} with DNI: ${DTHDNI()}")
+    }
+}
+def remove_bwa_ChildDevice() {
+    getAllChildDevices().each {
+        log.debug "Deleting Spa device: ${it.deviceNetworkId}"
+        try {
+            deleteChildDevice(it.deviceNetworkId)
+        }
+        catch (e) {
+            log.debug "${e} deleting the Spa device: ${it.deviceNetworkId}"
+        }
+    }
+}
+
+def PressButton(buttonNumber) {
+    def body = \
+    '<sci_request version="1.0"><data_service><targets>' + \
+    '<device id="' + state.devid + '"/></targets><requests>' + \
+    '<device_request target_name="Button">' + buttonNumber + '</device_request>' + \
+    '</requests></data_service></sci_request>'
+    return BalboaHttpRequest(body)
+}
+
+def send(name) {
+    def mapdata = ["name" : name, "value" : state."${name}"]
+    def d = getChildDevice(DTHDNI())
+    def statusElements = ["heatMode","thermostatOperatingState","heatingSetpoint","tempunits"]
+    Date now = new Date()
+    def timeString = new Date().format("M/d 'at' h:mm:ss a",location.timeZone).toLowerCase()
+    d.sendEvent(mapdata)
+    if (statusElements.contains(name)) {
+        d.sendEvent(name: "tubStatus",
+                    value: "${state.heatMode} - ${state.thermostatOperatingState.capitalize()} to ${state.heatingSetpoint}${state.tempunits} on ${timeString}",
+                    displayed: false)
+    }
+}
+
 def timestamp() {
     Date datenow = new Date()
     def tf = new java.text.SimpleDateFormat('EEE MMM d h:mm:ss a')
@@ -699,6 +735,10 @@ def random() {
     return runID
 }
 
+def updateStateVar(key='timestamp', value=null, cmd='put') {
+    if (key=="timestamp") { value = timestamp() }
+    state."${key}" = "${value}"
+}
 
 // Constant Declarations
 def errorVerbose(String message) {if (errorVerbose){log.info "${message}"}}
@@ -714,4 +754,9 @@ Map idigiHeaders() {
         'Cookie'		: 'JSESSIONID = BC58572FF42D65B183B0318CF3B69470; BIGipServerAWS - DC - CC - Pool - 80 = 3959758764.20480.0000',
         'Authorization'	: 'Basic QmFsYm9hV2F0ZXJJT1NBcHA6azJuVXBSOHIh'
     ]
+}
+String Web_idigi_post()  { return "https://developer.idigi.com/ws/sci" }
+String Web_postdata() 	 { return '<sci_request version="1.0"><file_system cache="false" syncTimeout="15">\
+    <targets><device id="' + "${state.devid}" + '"/></targets><commands><get_file path="PanelUpdate.txt"/>\
+    <get_file path="DeviceConfiguration.txt"/></commands></file_system></sci_request>'
 }
