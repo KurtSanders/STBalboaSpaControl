@@ -24,7 +24,7 @@ def version()   { return ["V1.0", "Original Code Base"] }
 // End Version Information
 
 String appVersion()	 { return "1.0.1" }
-String appModified() { return "2019-03-06" }
+String appModified() { return "2019-04-09" }
 
 definition(
     name: 		"Balboa Spa Controller",
@@ -580,7 +580,7 @@ def setScheduler(schedulerFreq) {
     } else {
         infoVerbose("Scheduled RunEvery${schedulerFreq}Minute")
     }
-    send([name:'schedulerFreq', value: schedulerFreq])
+    send('schedulerFreq')
 }
 
 def boolean isIP(String str)
