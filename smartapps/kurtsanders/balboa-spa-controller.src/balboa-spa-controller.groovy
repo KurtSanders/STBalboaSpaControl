@@ -23,8 +23,8 @@ import java.text.SimpleDateFormat;
 def version()   { return ["V1.0", "Original Code Base"] }
 // End Version Information
 
-String appVersion()	 { return "1.0.1" }
-String appModified() { return "2019-04-09" }
+String appVersion()	 { return "1.0.2" }
+String appModified() { return "2019-09-17" }
 
 definition(
     name: 		"Balboa Spa Controller",
@@ -49,15 +49,12 @@ def mainMenu() {
         log.info "Calling subroutine: getHotTubDeviceID()"
         if (getHotTubDeviceID()) {
             imageName    = getAppImg("icons/success-icon.png")
-            log.debug "state.devid 		= ${state.devid}"
-            log.debug "state.publicip 	= ${state.publicip}"
-            log.debug "state.hostname 	= ${state.hostname} => Preference: ${hostName}"
             spaDeviceOK = true
         } else {
             state.devid 	= null
+            spaDeviceOK = false
         }
     }
-    log.debug "spaDeviceOK: ${spaDeviceOK}"
     dynamicPage(name: "mainMenu",
                 title: "Spa Network & Location Information",
                 nextPage: (spaDeviceOK)?"mainOptions":null,
@@ -68,7 +65,7 @@ def mainMenu() {
         section ("Spa WiFi Information") {
             input ( name: "hostName",
                    type: "text",
-                   title: "Select the FQDN or PUBLIC IP Address of your network?",
+                   title: "Select your PUBLIC IP4 Address of your router?",
                    submitOnChange: true,
                    multiple: false,
                    required: true
@@ -87,17 +84,17 @@ def mainMenu() {
                     title : "Public IP: ${state.publicip}",
                         "DevID: ${state.devid}\n" +
                         "Mac: ${state.mac}\n" +
-                        "Local IP: ${state.localip}\n" +
+                        "Spa IP: ${state.localip}\n" +
                         "Online: ${state.online}\n" +
                         "Last Msg: ${state.lastupdate}"
             }
-        } else if (state.devid) {
+        } else if (state.devid == null) {
             section("Spa's Status/Information") {
-                paragraph "Error: Spa Not Found at ${hostName}"
+                paragraph "Error: Spa Not Found at Public IP: ${hostName}"
                 paragraph image: getAppImg("icons/failure-icon.png"),
                     required: false,
-                    title : "Bad IP Address/DNS Name",
-                    "Please Correct your home's public IP address"
+                    title : "Bad IP Address Entered",
+                    "Please Enter a Valid IP4 Public address (nnn.nnn.nnn.nnn) of your home router"
             }
         }
         section ("${app.name} Information") {
@@ -477,24 +474,19 @@ def decodeSpaB64Data() {
 }
 
 def getHotTubDeviceID() {
-    def ipAddress	 	= null
-    if (isIP(hostName)) {
-        ipAddress = hostName
+	def regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+    if (hostName.findAll(regex)) {
+        state.devid = getSpaDevId(hostName)
+        log.debug "getHotTubDeviceID(): Received ${state.devid} from getSpaDevId(${hostName})"
     } else {
-        ipAddress = convertHostnameToIPAddress(hostName)
-    }
-    if (ipAddress) {
-        state.devid = getSpaDevId(ipAddress)
-        log.debug "getHotTubDeviceID(): Received ${state.devid} from getSpaDevId(${ipAddress})"
-    } else {
-        log.error "Invalid public IP address provided"
+        log.error "Invalid public IP4 address provided"
         state.devid = null
         return false
     }
     if (state.devid) {
-        log.debug "getHotTubDeviceID(): Valid Spa devID, Defining State Variables ${devID}, ${hostName}, ${ipAddress}"
+        log.debug "getHotTubDeviceID(): Valid Spa devID, Defining State Variables ${devID}, ${hostName}"
         state.hostname 	= hostName
-		state.publicip 	= ipAddress
+		state.publicip 	= hostName
     } else {
         log.error "getHotTubDeviceID(): Invalid Spa devID, Erased state variables because the Spa devid = ${devID}"
         state.hostname 	= null
@@ -523,6 +515,7 @@ def getSpaDevId(ipAddress) {
             }
             else {
                 log.error "HttpGet Request for devID got http status ${resp.status}"
+                respdata = null
                 return null
             }
         }
@@ -532,6 +525,7 @@ def getSpaDevId(ipAddress) {
         log.error "${e}"
         return null
     }
+    if (respdata) {
     def lastUpdateTime 	= dtf.parse(respdata.items?.dpLastUpdateTime[0])
     def loc = getTwcLocation()?.location
     tf.setTimeZone(TimeZone.getTimeZone(loc.ianaTimeZone))
@@ -542,6 +536,8 @@ def getSpaDevId(ipAddress) {
     state.localip 		= respdata.items?.dpLastKnownIp[0]
     state.online 		= respdata.items?.dpConnectionStatus[0]=='1'?'True':'False'
     return state.devid
+}
+    return null
 }
 
 def setScheduler(schedulerFreq) {
@@ -595,33 +591,6 @@ def boolean isIP(String str)
         }
         return true;
     } catch (Exception e){return false}
-}
-
-def String convertHostnameToIPAddress(hostNameTMP) {
-    def params = [
-        uri			: "https://dns.google.com/resolve?name=" + hostNameTMP,
-        contentType	: 'application/json'
-    ]
-    def ipAddress = null
-    try {
-        httpGet(params) { response ->
-            infoVerbose("DNS Lookup Request, data=$response.data, status=$response.status")
-            infoVerbose("DNS Lookup Result Status : ${response.data?.Status}")
-            if (response.data?.Status == 0) { // Success
-                for (answer in response.data?.Answer) { // Loop through results looking for the first IP address returned otherwise it's redirects
-                    infoVerbose("Processing response: ${answer}")
-                    infoVerbose("HostName ${answer.name} has IP Address of '${answer.data}'")
-                    ipAddress = answer.data
-                }
-            } else {
-                errorVerbose("DNS unable to resolve hostName ${response.data?.Question[0]?.name}, Error: ${response.data?.Comment}")
-            }
-        }
-    } catch (Exception e) {
-        errorVerbose("Unable to convert hostName to IP Address, Error: $e")
-    }
-    infoVerbose("Returning IP $retVal for HostName $hostName")
-    return ipAddress
 }
 
 def tubAction(feature, command) {
