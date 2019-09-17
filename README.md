@@ -3,8 +3,10 @@ SanderSoft™ 2019
 
 ---
 
-#### Version 1.0.1
-* This initial alpha version is functional VIEW STATUS only except for Lights On/Off and Set Desired Heat Temperature Up/Down Buttons.  
+#### Version 1.0.2
+* This version is functional VIEW STATUS only except for Lights On/Off and Set Desired Heat Temperature Up/Down Buttons. 
+* The IP4 address must be the [public IP address](https://whatismyipaddress.com/) of your home router where the SPA is connected. Several sites provide this address.
+	* [https://whatismyipaddress.com/](https://whatismyipaddress.com/)    
 
 Future updates will be provided to allow one to change the spa operating state (Pumps, Heat Mode, etc).
 
@@ -46,8 +48,8 @@ You will need to use 'Update from Repo' to install into your SmartThings IDE rep
 
 | IDE Repository    | Filename | Status | Version |
 | :---: | :----------| :---:  | :---:  |
-| My SmartApps      | kurtsanders : Balboa Spa Controller | **New**  | 1.0.1 |
-| My Device Handler | kurtsanders : Balboa Spa Control Device | **New** | 1.0.1 |
+| My SmartApps      | kurtsanders : Balboa Spa Controller | ** :new: **  | 1.0.2 |
+| My Device Handler | kurtsanders : Balboa Spa Control Device | **UnChanged** | 1.0.1 |
 
 
 **Instructions**
@@ -55,4 +57,4 @@ You will need to use 'Update from Repo' to install into your SmartThings IDE rep
 1. Using the 'Update from REPO' button in the 'My SmartApps' SmartThings IDE, check the 'Balboa Spa Controller' SmartApp and publish & press Save.  
 2. Using the 'Update from REPO' button in the "My Device Handlers" SmartThings IDE, check the Balboa Spa Control Device and publish & press Save.  ([See GitHub IDE integration](https://docs.smartthings.com/en/latest/tools-and-ide/github-integration.html?highlight=github)) from this STBalboaSpaControl(master) repository to your SmartThings IDE.
 3. Locate the Balboa Spa Control app in the MarketPlace/SmartApps/My Apps list and click to launch the smartapp.
-4. Enter your [routers public IP address](https://www.google.com/search?q=whats+my+ip+address) or DNS name if you have this service set in your router or otherwise. 
+4. Enter your [home routers' public IP4 address](https://www.google.com/search?q=whats+my+ip+address). 
