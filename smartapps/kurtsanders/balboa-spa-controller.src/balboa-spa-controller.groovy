@@ -20,11 +20,9 @@ import groovy.time.*
 import java.text.SimpleDateFormat;
 
 // Start Version Information
-def version()   { return ["V1.0", "Original Code Base"] }
+String version()	 	{ return "1.0.2" }
+String appModified() 	{ return "2019-09-17" }
 // End Version Information
-
-String appVersion()	 { return "1.0.2" }
-String appModified() { return "2019-09-17" }
 
 definition(
     name: 		"Balboa Spa Controller",
@@ -94,16 +92,41 @@ def mainMenu() {
                 paragraph image: getAppImg("icons/failure-icon.png"),
                     required: false,
                     title : "Bad IP Address Entered",
-                    "Please Enter a Valid IP4 Public address (nnn.nnn.nnn.nnn) of your home router"
+                        "Please Enter a Valid IP4 Public address (nnn.nnn.nnn.nnn) of your home router"
             }
         }
         section ("${app.name} Information") {
             paragraph image: getAppImg("icons/SpaController.png"),
                 title	: appAuthor(),
                     required: false,
-                    "Version: ${version()[0]}\n" +
-                    "Updates: ${version()[1]}"
+                    "Version: ${version()}\n" +
+                    "Date: ${appModified()}\n"
+            href(name: "hrefReadme",
+                 title: "${appNameVersion()} Setup/Read Me Page",
+                 required: false,
+                 style: "external",
+                 url: "https://github.com/KurtSanders/STBalboaSpaControl/blob/master/README.md#stbalboaspacontrol",
+                 description: "tap to view the Setup/Read Me page")
+
         }
+        section(hideable: true, hidden: true, "Optional: SmartThings IDE Live Logging Levels") {
+            input ( name: "debugVerbose", type: "bool",
+                   title: "Show Debug Messages in IDE",
+                   description: "Verbose Mode",
+                   required: false
+                  )
+            input ( name: "infoVerbose", type: "bool",
+                   title: "Show Info Messages in IDE",
+                   description: "Verbose Mode",
+                   required: false
+                  )
+            input ( name: "errorVerbose", type: "bool",
+                   title: "Show Error Info Messages in IDE",
+                   description: "Verbose Mode",
+                   required: false
+                  )
+        }
+
     }
 }
 
@@ -138,23 +161,6 @@ def mainOptions() {
                    title: "This SmartApp's Name",
                    state: (name ? "complete" : null),
                    defaultValue: "${app.name}",
-                   required: false
-                  )
-        }
-        section(hideable: true, hidden: true, "Optional: SmartThings IDE Live Logging Levels") {
-            input ( name: "debugVerbose", type: "bool",
-                   title: "Show Debug Messages in IDE",
-                   description: "Verbose Mode",
-                   required: false
-                  )
-            input ( name: "infoVerbose", type: "bool",
-                   title: "Show Info Messages in IDE",
-                   description: "Verbose Mode",
-                   required: false
-                  )
-            input ( name: "errorVerbose", type: "bool",
-                   title: "Show Error Info Messages in IDE",
-                   description: "Verbose Mode",
                    required: false
                   )
         }
@@ -526,17 +532,17 @@ def getSpaDevId(ipAddress) {
         return null
     }
     if (respdata) {
-    def lastUpdateTime 	= dtf.parse(respdata.items?.dpLastUpdateTime[0])
-    def loc = getTwcLocation()?.location
-    tf.setTimeZone(TimeZone.getTimeZone(loc.ianaTimeZone))
-    state.lastupdate 	= "${tf.format(lastUpdateTime)}"
-    state.devid 		= respdata.items?.devConnectwareId[0]
-    state.devicetype 	= respdata.items?.dpDeviceType[0]
-    state.mac 			= respdata.items?.devMac[0]
-    state.localip 		= respdata.items?.dpLastKnownIp[0]
-    state.online 		= respdata.items?.dpConnectionStatus[0]=='1'?'True':'False'
-    return state.devid
-}
+        def lastUpdateTime 	= dtf.parse(respdata.items?.dpLastUpdateTime[0])
+        def loc = getTwcLocation()?.location
+        tf.setTimeZone(TimeZone.getTimeZone(loc.ianaTimeZone))
+        state.lastupdate 	= "${tf.format(lastUpdateTime)}"
+        state.devid 		= respdata.items?.devConnectwareId[0]
+        state.devicetype 	= respdata.items?.dpDeviceType[0]
+        state.mac 			= respdata.items?.devMac[0]
+        state.localip 		= respdata.items?.dpLastKnownIp[0]
+        state.online 		= respdata.items?.dpConnectionStatus[0]=='1'?'True':'False'
+        return state.devid
+    }
     return null
 }
 
@@ -713,10 +719,11 @@ def updateStateVar(key='timestamp', value=null, cmd='put') {
 def errorVerbose(String message) {if (errorVerbose){log.info "${message}"}}
 def debugVerbose(String message) {if (debugVerbose){log.info "${message}"}}
 def infoVerbose(String message)  {if (infoVerbose){log.info "${message}"}}
-String appAuthor()	 { return "SanderSoft™" }
-String getAppImg(imgName) { return "https://raw.githubusercontent.com/KurtSanders/STBalboaSpaControl/master/images/$imgName" }
-String DTHName() { return "Balboa Spa Control Device" }
-String DTHDNI() { return "bscd-${app.id}" }
+String appNameVersion() 		{ return "Balboa Spa Controller ${version()}" }
+String appAuthor()	 			{ return "SanderSoft™" }
+String getAppImg(imgName) 		{ return "https://raw.githubusercontent.com/KurtSanders/STBalboaSpaControl/master/images/$imgName" }
+String DTHName() 				{ return "Balboa Spa Control Device" }
+String DTHDNI() 				{ return "bscd-${app.id}" }
 Map idigiHeaders() {
     return [
         'UserAgent'		: 'Spa / 48 CFNetwork / 758.5.3 Darwin / 15.6.0',
