@@ -1,6 +1,8 @@
 # STBalboaSpaControl
 SanderSoft™ 2019
 
+# This app is Unsupported by the devloper who now uses Hubitat.  The new SmartThings mobile client and platform is unreliable and buggy.
+
 ---
 
 #### Version 1.0.2
